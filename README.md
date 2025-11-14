@@ -1,6 +1,6 @@
-# Password Mango
+# Pasword Mango
 
-Password Mango is a secure and user-friendly password manager designed to help you manage your credentials effortlessly. It leverages a modern tech stack with a Go backend for performance, Clerk for robust authentication, Convex for real-time database capabilities, and a C++ Qt frontend for a native cross-platform experience.
+Pasword Mango is a secure and user-friendly password manager designed to help you manage your credentials effortlessly. It leverages a modern tech stack with a Go backend for performance, Clerk for robust authentication, Convex for real-time database capabilities, and a C++ Qt frontend for a native cross-platform experience.
 
 ## ✨ Features
 
