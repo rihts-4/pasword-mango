@@ -8,5 +8,5 @@ import (
 
 func main() {
 	auth.Auth()
-	fmt.Println("Hello, Go Project!")
+	fmt.Println("Hello, Go Projec!")
 }
