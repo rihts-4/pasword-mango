@@ -1,6 +1,11 @@
 package main
 
 //this contains the interface (for now it will be connected to terminal, later C++ Qt will connect to it)
+/*
+Current Assumptions:
+- One User (me) ## SO NO USER AUTH
+- Small DB
+*/
 
 import (
 	"fmt"
@@ -8,17 +13,13 @@ import (
 	"github.com/rihts-4/pasword-mango/data"
 )
 
-func printAllCred(credMap map[string]data.Credentials) {
-	for site, credentials := range credMap {
-		fmt.Printf("Site: %s, Username: %s, Password: %s\n", site, credentials.Username, credentials.Password)
-	}
-}
-
 func main() {
 	credMap := make(map[string]data.Credentials)
-	data.Store(credMap, "google", "admin", "password")
-	printAllCred(credMap)
+	fmt.Println("Interface Starts: Running....")
+	data.Store(credMap, "google", "admin", "passsword")
 	data.Store(credMap, "fabook", "nouse", "p125")
-	printAllCred(credMap)
-	fmt.Println("Hello, Go Projec!")
+	data.Show(credMap)
+	data.Update(credMap, "google", "admin_updated", "newpassword")
+	data.Show(credMap)
+	fmt.Println("Interface Ends: Exiting....")
 }
