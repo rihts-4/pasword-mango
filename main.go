@@ -16,7 +16,7 @@ func printAllCred(credMap map[string]data.Credentials) {
 
 func main() {
 	credMap := make(map[string]data.Credentials)
-	data.Store(credMap, "google", "admin", "passsword")
+	data.Store(credMap, "google", "admin", "password")
 	printAllCred(credMap)
 	data.Store(credMap, "fabook", "nouse", "p125")
 	printAllCred(credMap)
