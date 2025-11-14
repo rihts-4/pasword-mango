@@ -12,7 +12,6 @@ func Store(credMap map[string]Credentials, site string, username string, passwor
 		credMap = make(map[string]Credentials)
 	}
 	credMap[site] = Credentials{username, password}
-	fmt.Println("Credentials stored successfully!")
 }
 
 func Update(credMap map[string]Credentials, site string, username string, password string) {
