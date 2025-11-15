@@ -16,9 +16,6 @@ type Node struct {
 // /each child should first be initialized to nil
 func NewNode(char string) *Node {
 	node := &Node{Char: char}
-	for i := 0; i < 26; i++ {
-		node.Children[i] = nil
-	}
 	node.IsEnd = false
 	return node
 }
