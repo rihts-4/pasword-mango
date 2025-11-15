@@ -7,15 +7,24 @@ type Credentials struct {
 	Password string
 }
 
-func Store(credMap map[string]Credentials, site string, username string, password string) {
+var credMap map[string]Credentials = make(map[string]Credentials)
+var siteSearch *Trie
+
+func InitCredMap() {
+	credMap = make(map[string]Credentials)
+	siteSearch = NewTrie()
+}
+
+func Store(site string, username string, password string) {
 	if credMap == nil {
 		credMap = make(map[string]Credentials)
 	}
 	credMap[site] = Credentials{username, password}
+	siteSearch.Insert(site)
 }
 
-func Update(credMap map[string]Credentials, site string, username string, password string) {
-	if _, exists := credMap[site]; !exists {
+func Update(site string, username string, password string) {
+	if _, exists := Retrieve(site); !exists {
 		fmt.Println("No such site to update.")
 		return
 	}
@@ -24,30 +33,27 @@ func Update(credMap map[string]Credentials, site string, username string, passwo
 	fmt.Println("Credentials updated successfully!")
 }
 
-func Show(credMap map[string]Credentials) {
+func Show() {
 	for site, credentials := range credMap {
 		fmt.Printf("Site: %s, Username: %s, Password: %s\n", site, credentials.Username, credentials.Password)
 	}
 }
 
-func Retrieve(credMap map[string]Credentials, site string) (Credentials, bool) {
+func Retrieve(site string) (Credentials, bool) {
 	if credMap == nil {
-		fmt.Println("No such map")
+		fmt.Println("Map not initialized.")
 	}
 
-	cred, exists := credMap[site]
-	if !exists {
-		fmt.Println("No such site")
+	if siteSearch.SearchWord(site) {
+		return credMap[site], true
 	}
-
-	fmt.Println("Credentials retrieved successfully!")
-
-	return cred, exists
+	return Credentials{}, false
 }
 
-func Delete(credMap map[string]Credentials, site string) bool {
-	if _, exists := credMap[site]; exists {
+func Delete(site string) bool {
+	if _, exists := Retrieve(site); exists {
 		delete(credMap, site)
+		siteSearch.Delete(site) // Also delete from the trie
 		fmt.Println("Credentials deleted successfully!")
 		return true
 	}
