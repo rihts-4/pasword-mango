@@ -54,7 +54,7 @@ func (t *Trie) SearchWord(word string) bool {
 	current := t.RootNode
 	for i := 0; i < len(strippedWord); i++ {
 		index := strippedWord[i] - 'a'
-		//we have encountered null in the path we were transversing meaning this is the last node
+		//we have encountered null in the path we were traversing meaning this is the last node
 		///that means this word is not indexed(present) in this trie
 		if current.Children[index] == nil {
 			return false
