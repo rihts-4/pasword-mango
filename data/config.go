@@ -28,7 +28,6 @@ var credMutex = &sync.Mutex{}
 //
 // It loads variables from a ".env" file and reads ENCRYPTION_KEY, PROJECT_ID, and GOOGLE_APPLICATION_CREDENTIALS from the environment. On success it assigns the decoded 32-byte AES key to the package-level `encryptionKey` and the initialized Firestore client to the package-level `firestoreClient`. It returns an error if the encryption key is missing, cannot be hex-decoded, is not 32 bytes long, or if Firebase app or Firestore client initialization fails.
 func InitDB(ctx context.Context) error {
-func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 	if err != nil {
 		return fmt.Errorf("error loading .env file: %v", err)
