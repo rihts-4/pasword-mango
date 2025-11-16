@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -76,7 +77,7 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := data.Store(ctx, payload.Site, payload.Username, payload.Password); err != nil {
-			if err == data.ErrAlreadyExists {
+			if errors.Is(err, data.ErrAlreadyExists) {
 				http.Error(w, "Site already exists. Use PUT to update.", http.StatusConflict)
 				return
 			}
@@ -136,7 +137,7 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := data.Delete(ctx, site); err != nil {
-			if err == data.ErrNotFound {
+			if errors.Is(err, data.ErrNotFound) {
 				http.Error(w, "Credentials not found", http.StatusNotFound)
 				return
 			}
