@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"cloud.google.com/go/firestore"
@@ -42,9 +41,8 @@ func updateLocked(ctx context.Context, site string, username string, password st
 // findSiteDocument locates the Firestore document reference for a site's credentials.
 // It first attempts the provided site string; if that document is not found it will
 // try the alternative form obtained by adding or removing a trailing ".com". If a
-// document is found it returns its reference. Non-NotFound errors encountered while
-// querying are logged for debugging. If no document is found the function returns an error
-// indicating credentials for the site were not found.
+// document is found it returns its reference. Non-NotFound errors (e.g., network errors,
+// permission errors) are returned to the caller. If no document is found, it returns ErrNotFound.
 func findSiteDocument(ctx context.Context, site string) (*firestore.DocumentRef, error) {
 	// First attempt: try the site name as provided.
 	docRef := firestoreClient.Collection("credentials").Doc(site)
@@ -54,21 +52,26 @@ func findSiteDocument(ctx context.Context, site string) (*firestore.DocumentRef,
 		return docRef, nil // Found on first try
 	}
 
+	// If it's not a NotFound error, return it immediately (e.g., network error, permission error)
+	if status.Code(err) != codes.NotFound {
+		return nil, fmt.Errorf("error accessing Firestore for site '%s': %w", site, err)
+	}
+
 	// If not found, try the alternative form using public suffix logic.
 	// This handles multi-level TLDs like .co.uk correctly.
-	if status.Code(err) == codes.NotFound {
-		alternativeSite := getAlternativeSite(site)
-		if alternativeSite != "" {
-			docRef = firestoreClient.Collection("credentials").Doc(alternativeSite)
-			if _, err = docRef.Get(ctx); err == nil {
-				return docRef, nil // Found on second try
-			}
+	alternativeSite := getAlternativeSite(site)
+	if alternativeSite != "" {
+		docRef = firestoreClient.Collection("credentials").Doc(alternativeSite)
+		_, err = docRef.Get(ctx)
+		if err == nil {
+			return docRef, nil // Found on second try
+		}
+		// Again, if it's not a NotFound error, return it immediately
+		if status.Code(err) != codes.NotFound {
+			return nil, fmt.Errorf("error accessing Firestore for site '%s' (alternative: '%s'): %w", site, alternativeSite, err)
 		}
 	}
-	// Log the error if it's not a NotFound error for debugging purposes.
-	if err != nil && status.Code(err) != codes.NotFound {
-		log.Printf("Error during findSiteDocument for site '%s': %v", site, err)
-	}
+
 	return nil, ErrNotFound
 }
 

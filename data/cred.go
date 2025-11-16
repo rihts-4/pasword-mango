@@ -16,15 +16,19 @@ var ErrAlreadyExists = errors.New("credentials for site already exist")
 // before writing and updating existing entries when present.
 //
 // Store acquires a package-level mutex to serialize write operations. If a document
-// for the site already exists, it updates that document; otherwise it creates a new one.
-// It returns an error if checking existence, encrypting the password, or writing to
-// Firestore fails.
+// for the site already exists, it returns ErrAlreadyExists; otherwise it creates a new one.
+// It returns an error if checking existence fails (e.g., network or permission errors),
+// if encrypting the password fails, or if writing to Firestore fails.
 func Store(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
 
 	// Use findSiteDocument to check for existence with flexible matching.
-	docRef, _ := findSiteDocument(ctx, site)
+	docRef, err := findSiteDocument(ctx, site)
+	if err != nil && err != ErrNotFound {
+		// Non-NotFound errors (e.g., network errors, permission errors) should be returned
+		return err
+	}
 	if docRef != nil {
 		return ErrAlreadyExists
 	}
