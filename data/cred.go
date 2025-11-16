@@ -31,6 +31,7 @@ var firestoreClient *firestore.Client
 var encryptionKey []byte
 var credMutex = &sync.Mutex{}
 
+// InitDB initializes the Firestore database client and loads the encryption key from environment variables.
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 
@@ -68,6 +69,7 @@ func InitDB(ctx context.Context) error {
 	return nil
 }
 
+// CloseDB closes the Firestore client connection and releases associated resources.
 func CloseDB() {
 	if firestoreClient != nil {
 		if err := firestoreClient.Close(); err != nil {
@@ -76,6 +78,7 @@ func CloseDB() {
 	}
 }
 
+// Store saves credentials for a given site to Firestore with encrypted password.
 func Store(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -89,8 +92,8 @@ func Store(ctx context.Context, site string, username string, password string) e
 
 	if doc != nil && doc.Exists() {
 		fmt.Printf("Credentials for '%s' already exist. Updating credentials.\n", site)
-		// Call Update without the mutex since we already hold it
-		return updateWithoutLock(ctx, site, username, password)
+		// Call updateLocked without acquiring the mutex since we already hold it
+		return updateLocked(ctx, site, username, password)
 	}
 
 	encryptedPassword, err := encrypt(password)
@@ -110,16 +113,17 @@ func Store(ctx context.Context, site string, username string, password string) e
 	return nil
 }
 
+// Update updates existing credentials for a given site in Firestore with a new encrypted password.
 func Update(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
 
-	return updateWithoutLock(ctx, site, username, password)
+	return updateLocked(ctx, site, username, password)
 }
 
-// updateWithoutLock performs the update operation without acquiring the mutex.
-// This is used internally when the mutex is already held by the caller.
-func updateWithoutLock(ctx context.Context, site string, username string, password string) error {
+// updateLocked updates credentials for a site without acquiring the mutex.
+// The caller must already hold credMutex.
+func updateLocked(ctx context.Context, site string, username string, password string) error {
 	encryptedPassword, err := encrypt(password)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt password for site %s: %v", site, err)
@@ -137,6 +141,7 @@ func updateWithoutLock(ctx context.Context, site string, username string, passwo
 	return nil
 }
 
+// Show retrieves and displays all stored credentials from Firestore with decrypted passwords.
 func Show(ctx context.Context) {
 	iter := firestoreClient.Collection("credentials").Documents(ctx)
 	for {
@@ -160,6 +165,7 @@ func Show(ctx context.Context) {
 	}
 }
 
+// Retrieve fetches and decrypts credentials for a specific site from Firestore.
 func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
 	if err != nil {
@@ -179,6 +185,7 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	return creds, true
 }
 
+// Delete removes credentials for a given site from Firestore.
 func Delete(ctx context.Context, site string) bool {
 	credMutex.Lock()
 	defer credMutex.Unlock()
