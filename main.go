@@ -1,60 +1,44 @@
 package main
 
-//this contains the interface (for now it will be connected to terminal, later C++ Qt will connect to it)
-/*
-Current Assumptions:
-- One User (me) ## SO NO USER AUTH
-- Small DB
-*/
-
 import (
+	"context"
 	"fmt"
+	"log"
 
 	"github.com/rihts-4/pasword-mango/data"
 )
 
 func main() {
-	fmt.Println("Interface Starts: Running....")
-	data.InitCredMap()
-	//Data Population
-	data.Store("google", "admin", "password")
-	data.Store("facebook", "nouse", "p125")
-	data.Store("example", "user", "password123")
-	data.Store("twitter", "john_doe", "Tw1tt3r2024!")
-	data.Store("github", "developer", "c0d3Master#99")
-	data.Store("linkedin", "professional", "Career$ecure1")
-	data.Store("instagram", "photo_user", "Insta@Pass567")
-	data.Store("microsoft", "office_admin", "M$0ffice2024")
-	data.Store("amazon", "shopper123", "Amaz0n!Prime")
-	data.Store("netflix", "movie_buff", "Netfl1x&Chill")
-	data.Store("spotify", "music_lover", "Spot1fy!Beats")
-	data.Store("reddit", "redditor42", "R3dd!tK@rma")
-	data.Store("dropbox", "cloud_user", "Dr0pb0x$ync!")
-	//Data Population Ends
+	ctx := context.Background()
 
-	credentials, found := data.Retrieve("github")
-	if found {
-		fmt.Printf("Credentials for github - Username: %s, Password: %s\n", credentials.Username, credentials.Password)
-	} else {
-		fmt.Println("No credentials found for github")
+	// Initialize the database connection from the data package
+	err := data.InitDB(ctx)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	// Defer closing the connection until the main function exits
+	defer data.CloseDB()
 
-	data.Update("github", "dev_guru", "N3wP@ssw0rd!")
-	credentials, found = data.Retrieve("github")
-	if found {
-		fmt.Printf("Updated Credentials for github - Username: %s, Password: %s\n", credentials.Username, credentials.Password)
-	} else {
-		fmt.Println("No credentials found for github")
+	fmt.Println("--- Storing new credentials for 'google.com' ---")
+	err = data.Store(ctx, "google.com", "testuser", "password123")
+	if err != nil {
+		log.Printf("Could not store credentials: %v\n", err)
 	}
+	fmt.Println()
 
-	deleted := data.Delete("twitter")
-	if deleted {
-		fmt.Println("Twitter credentials deleted.")
+	fmt.Println("--- Showing all stored credentials ---")
+	data.Show(ctx)
+	fmt.Println()
+
+	fmt.Println("--- Retrieving credentials for 'google.com' ---")
+	if creds, found := data.Retrieve(ctx, "google.com"); found {
+		fmt.Printf("Found credentials for google.com: Username=%s, Password=%s\n", creds.Username, creds.Password)
 	} else {
-		fmt.Println("No Twitter credentials to delete.")
+		fmt.Println("Could not find credentials for google.com.")
 	}
+	fmt.Println()
 
-	data.Show()
-
-	fmt.Println("Interface Ends: Exiting....")
+	// fmt.Println("--- Deleting credentials for 'google.com' ---")
+	// data.Delete(ctx, "google.com")
+	fmt.Println()
 }
