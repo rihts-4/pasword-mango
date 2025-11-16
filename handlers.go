@@ -38,6 +38,43 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Trim whitespace from all fields
+		payload.Site = strings.TrimSpace(payload.Site)
+		payload.Username = strings.TrimSpace(payload.Username)
+		payload.Password = strings.TrimSpace(payload.Password)
+
+		// Validate that all fields are non-empty
+		if payload.Site == "" {
+			http.Error(w, "Site is required and cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if payload.Username == "" {
+			http.Error(w, "Username is required and cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if payload.Password == "" {
+			http.Error(w, "Password is required and cannot be empty", http.StatusBadRequest)
+			return
+		}
+
+		// Enforce reasonable length limits
+		const maxSiteLength = 255
+		const maxUsernameLength = 255
+		const maxPasswordLength = 1000
+
+		if len(payload.Site) > maxSiteLength {
+			http.Error(w, fmt.Sprintf("Site must not exceed %d characters", maxSiteLength), http.StatusBadRequest)
+			return
+		}
+		if len(payload.Username) > maxUsernameLength {
+			http.Error(w, fmt.Sprintf("Username must not exceed %d characters", maxUsernameLength), http.StatusBadRequest)
+			return
+		}
+		if len(payload.Password) > maxPasswordLength {
+			http.Error(w, fmt.Sprintf("Password must not exceed %d characters", maxPasswordLength), http.StatusBadRequest)
+			return
+		}
+
 		if err := data.Store(ctx, payload.Site, payload.Username, payload.Password); err != nil {
 			http.Error(w, "Failed to store credentials", http.StatusInternalServerError)
 			return

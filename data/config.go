@@ -58,8 +58,6 @@ func InitDB(ctx context.Context) error {
 	return nil
 }
 
-// CloseDB closes the Firestore client and releases its resources.
-// If a client is initialized, it attempts to close it and logs any error encountered.
 // CloseDB closes the package-level Firestore client if it has been initialized.
 // It is safe to call multiple times; if closing the client fails, the error is logged.
 func CloseDB() {
