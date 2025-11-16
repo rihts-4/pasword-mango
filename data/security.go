@@ -9,7 +9,8 @@ import (
 	"io"
 )
 
-// encrypt encrypts data using AES-GCM.
+// encrypt encrypts the provided plaintext using AES-GCM.
+// The returned string is the ciphertext with the nonce prepended, encoded as hexadecimal.
 func encrypt(plaintext string) (string, error) {
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
@@ -31,7 +32,8 @@ func encrypt(plaintext string) (string, error) {
 }
 
 // decrypt decrypts a hex-encoded AES-GCM ciphertext using the package's encryptionKey and returns the plaintext string.
-// It returns an error if the input is not valid hex, the cipher/GCM cannot be initialized with the configured key, the ciphertext is too short to contain a nonce, or AEAD authentication fails.
+// decrypt decrypts a hex-encoded AES-GCM ciphertext using the package encryptionKey and returns the resulting plaintext string.
+// It returns an error if the input is not valid hex, the cipher or GCM cannot be initialized with the configured key, the ciphertext is shorter than the required nonce size, or AEAD authentication fails.
 func decrypt(ciphertextHex string) (string, error) {
 	ciphertext, err := hex.DecodeString(ciphertextHex)
 	if err != nil {

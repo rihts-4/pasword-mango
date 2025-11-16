@@ -53,7 +53,9 @@ func Store(ctx context.Context, site string, username string, password string) e
 
 // Update updates the stored credentials for the named site with the provided username and password.
 // It acquires an internal lock and delegates to the internal update implementation.
-// Returns an error if encryption or the Firestore write fails.
+// Update updates stored credentials for a site with a new username and password.
+// It locates the existing site entry, serializes the update to prevent concurrent writes,
+// and returns an error if the site is not found, if encryption fails, or if the Firestore write fails.
 func Update(ctx context.Context, site string, username string, password string) error {
 	docRef, err := findSiteDocument(ctx, site)
 	if err != nil {
@@ -70,7 +72,11 @@ func Update(ctx context.Context, site string, username string, password string) 
 // Show retrieves all credentials from Firestore, decrypts their passwords, and returns them as a slice.
 // For each document, it attempts to decrypt the password. On decryption failure, the error is logged,
 // and the password for that entry is set to "[DECRYPTION FAILED]".
-// It returns an error if iterating through the collection fails.
+// Show retrieves all stored site credentials and attempts to decrypt each password.
+// If a password cannot be decrypted, the error is logged and the password value
+// in the returned entry is set to "[DECRYPTION FAILED]".
+// It returns the slice of site credentials and a non-nil error only if iterating
+// the Firestore collection fails.
 func Show(ctx context.Context) ([]SiteCredentials, error) {
 	var results []SiteCredentials
 	iter := firestoreClient.Collection("credentials").Documents(ctx)
@@ -102,7 +108,9 @@ func Show(ctx context.Context) ([]SiteCredentials, error) {
 
 // Retrieve fetches credentials for the given site from Firestore and decrypts the stored password.
 // It attempts to find the site with and without a ".com" suffix.
-// It returns the Credentials with the decrypted Password and true if a document is found and decryption succeeds; otherwise it returns an empty Credentials and false.
+// Retrieve fetches stored credentials for the given site, decrypts the stored password, and returns the credentials.
+//
+// If the site document is not found, the document cannot be read or parsed, or password decryption fails, Retrieve returns an empty Credentials and false.
 func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	docRef, err := findSiteDocument(ctx, site)
 	if err != nil {
@@ -131,7 +139,8 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 }
 
 // Delete removes the credentials document for the named site from Firestore.
-// It acquires an internal mutex to serialize access and returns true on success, false on failure.
+// Delete removes the stored credentials document for the given site.
+// It acquires an internal mutex to serialize the deletion and returns true on successful removal, false if the site is not found or the deletion fails; errors are printed to stdout.
 func Delete(ctx context.Context, site string) bool {
 	docRef, err := findSiteDocument(ctx, site)
 	if err != nil {

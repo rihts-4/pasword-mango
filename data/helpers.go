@@ -14,7 +14,11 @@ import (
 // updateLocked updates credentials for a site without acquiring the mutex.
 // updateLocked encrypts the provided password and writes the credential document for the specified site to Firestore.
 // The caller must hold credMutex.
-// It returns an error if encryption fails or if the Firestore write operation fails.
+// updateLocked updates credentials for a site; the caller must hold credMutex.
+// It encrypts the provided password and stores the username and encrypted password
+// in the Firestore "credentials" collection using the site as the document ID.
+// On success it prints a confirmation message. It returns an error if encryption
+// fails or if writing the credentials to Firestore fails.
 func updateLocked(ctx context.Context, site string, username string, password string) error {
 	encryptedPassword, err := encrypt(password)
 	if err != nil {
@@ -34,7 +38,12 @@ func updateLocked(ctx context.Context, site string, username string, password st
 }
 
 // findSiteDocument attempts to find a document for a given site, trying both with and without a ".com" suffix.
-// It returns a reference to the document if found, or an error if not found or if another error occurs.
+// findSiteDocument locates the Firestore document reference for a site's credentials.
+// It first attempts the provided site string; if that document is not found it will
+// try the alternative form obtained by adding or removing a trailing ".com". If a
+// document is found it returns its reference. Non-NotFound errors encountered while
+// querying are logged for debugging. If no document is found the function returns an error
+// indicating credentials for the site were not found.
 func findSiteDocument(ctx context.Context, site string) (*firestore.DocumentRef, error) {
 	// First attempt: try the site name as provided.
 	docRef := firestoreClient.Collection("credentials").Doc(site)
