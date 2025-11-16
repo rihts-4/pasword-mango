@@ -24,7 +24,9 @@ var credMutex = &sync.Mutex{}
 //
 // InitDB reads environment variables (via .env), expects ENCRYPTION_KEY as a hex-encoded 32-byte key,
 // and requires PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS for Firebase initialization.
-// On success it sets the package-level encryptionKey and firestoreClient; on failure it returns a descriptive error.
+// InitDB loads environment configuration, validates a hex-encoded AES-256 encryption key, and initializes the Firestore client.
+//
+// It loads variables from a ".env" file and reads ENCRYPTION_KEY, PROJECT_ID, and GOOGLE_APPLICATION_CREDENTIALS from the environment. On success it assigns the decoded 32-byte AES key to the package-level `encryptionKey` and the initialized Firestore client to the package-level `firestoreClient`. It returns an error if the encryption key is missing, cannot be hex-decoded, is not 32 bytes long, or if Firebase app or Firestore client initialization fails.
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 
@@ -64,7 +66,8 @@ func InitDB(ctx context.Context) error {
 
 // CloseDB closes the Firestore client and releases its resources.
 // If a client is initialized, it attempts to close it and logs any error encountered.
-// It is safe to call CloseDB multiple times.
+// CloseDB closes the package-level Firestore client if it has been initialized.
+// It is safe to call multiple times; if closing the client fails, the error is logged.
 func CloseDB() {
 	if firestoreClient != nil {
 		if err := firestoreClient.Close(); err != nil {

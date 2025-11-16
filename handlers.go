@@ -9,6 +9,15 @@ import (
 	"github.com/rihts-4/pasword-mango/data"
 )
 
+// credentialsHandler handles HTTP CRUD operations for credentials under the /credentials/ path.
+// 
+// It supports the following methods:
+// - POST: creates credentials from a JSON body containing `site`, `username`, and `password` (returns 201 on success).
+// - GET: without a site lists all credentials as JSON; with a site returns that site's credentials as JSON (returns 404 if not found).
+// - PUT: updates credentials for the site in the URL using a JSON body with `username` and `password` (site must be present in the path).
+// - DELETE: deletes credentials for the site in the URL (site must be present in the path).
+// 
+// The handler returns 400 for malformed requests, 500 for internal/data errors, and 405 for unsupported methods.
 func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the site from the URL path, e.g., "/credentials/google.com" -> "google.com"
 	site := strings.TrimPrefix(r.URL.Path, "/credentials/")

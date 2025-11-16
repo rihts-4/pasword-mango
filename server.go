@@ -12,7 +12,7 @@ import (
 	"github.com/rihts-4/pasword-mango/data"
 )
 
-// run starts the HTTP server and handles graceful shutdown.
+// run starts the HTTP server, initializes the database, waits for SIGINT or SIGTERM to trigger a graceful shutdown with a 5-second timeout, and closes the database connection.
 func run(ctx context.Context, server *http.Server) {
 	err := data.InitDB(ctx)
 	if err != nil {
