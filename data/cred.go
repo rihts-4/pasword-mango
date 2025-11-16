@@ -1,80 +1,126 @@
 package data
 
 import (
+	"context"
 	"fmt"
-	"sync"
+	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go/v4"
+	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 )
 
 type Credentials struct {
-	Username string
-	Password string
+	Username string `firestore:"username"`
+	Password string `firestore:"password"`
 }
 
-var mu sync.RWMutex
-var credMap map[string]Credentials = make(map[string]Credentials) //consider race conditions (later iterations)
-var siteSearch *Trie                                              //consider race conditions (later iterations)
+var firestoreClient *firestore.Client
 
-func InitCredMap() {
-	credMap = make(map[string]Credentials)
-	siteSearch = NewTrie()
-} //consider concurrency issues
+func InitDB(ctx context.Context) error {
+	err := godotenv.Load(".env")
 
-func Store(site string, username string, password string) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if credMap == nil {
-		credMap = make(map[string]Credentials)
+	if err != nil {
+		log.Fatalf("Error loading .env file")
 	}
-	credMap[site] = Credentials{username, password}
-	siteSearch.Insert(site)
+
+	config := &firebase.Config{
+		ProjectID: os.Getenv("PROJECT_ID"),
+	}
+	sa := option.WithCredentialsFile("adminkey.json")
+	app, err := firebase.NewApp(ctx, config, sa)
+	if err != nil {
+		return fmt.Errorf("error initializing app: %v", err)
+	}
+
+	client, err := app.Firestore(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting Firestore client: %v", err)
+	}
+	firestoreClient = client
+	return nil
 }
 
-func Update(site string, username string, password string) {
-	mu.Lock()
-	defer mu.Unlock()
+func CloseDB() {
+	if firestoreClient != nil {
+		if err := firestoreClient.Close(); err != nil {
+			log.Printf("Failed to close Firestore client: %v", err)
+		}
+	}
+}
 
-	if _, exists := Retrieve(site); !exists {
-		fmt.Println("No such site to update.")
-		return
+func Store(ctx context.Context, site string, username string, password string) error {
+	// Check if credentials for the site already exist.
+	if _, exists := Retrieve(ctx, site); exists {
+		fmt.Printf("Credentials for '%s' already exist. Calling Update instead.\n", site)
+		return Update(ctx, site, username, password)
 	}
 
-	credMap[site] = Credentials{username, password}
+	creds := Credentials{
+		Username: username,
+		Password: password,
+	}
+	_, err := firestoreClient.Collection("credentials").Doc(site).Set(ctx, creds)
+	if err != nil {
+		return fmt.Errorf("failed adding credential for site %s: %v", site, err)
+	}
+	fmt.Println("Credentials stored successfully!")
+	return nil
+}
+
+func Update(ctx context.Context, site string, username string, password string) error {
+	creds := Credentials{
+		Username: username,
+		Password: password,
+	}
+	_, err := firestoreClient.Collection("credentials").Doc(site).Set(ctx, creds)
+	if err != nil {
+		return fmt.Errorf("failed updating credential for site %s: %v", site, err)
+	}
 	fmt.Println("Credentials updated successfully!")
+	return nil
 }
 
-func Show() {
-	mu.RLock()
-	defer mu.RUnlock()
+func Show(ctx context.Context) {
+	iter := firestoreClient.Collection("credentials").Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Failed to iterate: %v", err)
+		}
 
-	for site, credentials := range credMap {
-		fmt.Printf("Site: %s, Username: %s, Password: %s\n", site, credentials.Username, credentials.Password)
+		var creds Credentials
+		doc.DataTo(&creds)
+		fmt.Printf("Site: %s, Username: %s, Password: %s\n", doc.Ref.ID, creds.Username, creds.Password)
 	}
 }
 
-func Retrieve(site string) (Credentials, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	if credMap == nil {
-		fmt.Println("Map not initialized.")
+func Retrieve(ctx context.Context, site string) (Credentials, bool) {
+	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
+	if err != nil {
+		// Document does not exist
+		return Credentials{}, false
 	}
 
-	if siteSearch.SearchWord(site) {
-		return credMap[site], true
-	}
-	return Credentials{}, false
+	var creds Credentials
+	doc.DataTo(&creds)
+	return creds, true
 }
 
-func Delete(site string) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := Retrieve(site); exists {
-		delete(credMap, site)
-		siteSearch.Delete(site) // Also delete from the trie
-		fmt.Println("Credentials deleted successfully!")
-		return true
+func Delete(ctx context.Context, site string) bool {
+	_, err := firestoreClient.Collection("credentials").Doc(site).Delete(ctx)
+	if err != nil {
+		// We can log this error if needed, but for the function signature we just return false
+		fmt.Printf("Failed to delete site %s: %v\n", site, err)
+		return false
 	}
-	return false
+	fmt.Println("Credentials deleted successfully!")
+	return true
 }

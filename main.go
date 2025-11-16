@@ -5,58 +5,40 @@ import (
 	"fmt"
 	"log"
 
-	firebase "firebase.google.com/go/v4"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
+	"github.com/rihts-4/pasword-mango/data"
 )
-
-type User struct {
-	Name  string `firestore:"name"`
-	Email string `firestore:"email"`
-	Age   int    `firestore:"age"`
-}
 
 func main() {
 	ctx := context.Background()
 
-	config := &firebase.Config{
-		ProjectID: "pass-mang0",
-	}
-	sa := option.WithCredentialsFile("adminkey.json")
-	app, err := firebase.NewApp(ctx, config, sa)
+	// Initialize the database connection from the data package
+	err := data.InitDB(ctx)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	// Defer closing the connection until the main function exits
+	defer data.CloseDB()
 
-	client, err := app.Firestore(ctx)
+	fmt.Println("--- Storing new credentials for 'google.com' ---")
+	err = data.Store(ctx, "google.com", "testuser", "password123")
 	if err != nil {
-		log.Fatalln(err)
+		log.Printf("Could not store credentials: %v\n", err)
 	}
-	defer client.Close()
+	fmt.Println()
 
-	// Create
-	_, _, err = client.Collection("users").Add(ctx, User{
-		Name:  "Alice",
-		Email: "alice@example.com",
-		Age:   28,
-	})
-	if err != nil {
-		log.Fatalf("Failed adding user: %v", err)
+	fmt.Println("--- Showing all stored credentials ---")
+	data.Show(ctx)
+	fmt.Println()
+
+	fmt.Println("--- Retrieving credentials for 'google.com' ---")
+	if creds, found := data.Retrieve(ctx, "google.com"); found {
+		fmt.Printf("Found credentials for google.com: Username=%s, Password=%s\n", creds.Username, creds.Password)
+	} else {
+		fmt.Println("Could not find credentials for google.com.")
 	}
+	fmt.Println()
 
-	// Read all
-	iter := client.Collection("users").Documents(ctx)
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Failed to iterate: %v", err)
-		}
-
-		var user User
-		doc.DataTo(&user)
-		fmt.Printf("User: %+v\n", user)
-	}
+	fmt.Println("--- Deleting credentials for 'google.com' ---")
+	data.Delete(ctx, "google.com")
+	fmt.Println()
 }
