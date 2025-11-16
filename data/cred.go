@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/joho/godotenv"
 
@@ -28,6 +29,7 @@ type Credentials struct {
 
 var firestoreClient *firestore.Client
 var encryptionKey []byte
+var credMutex = &sync.Mutex{}
 
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
@@ -75,6 +77,9 @@ func CloseDB() {
 }
 
 func Store(ctx context.Context, site string, username string, password string) error {
+	credMutex.Lock()
+	defer credMutex.Unlock()
+
 	// Check if credentials for the site already exist.
 	if exists, err := documentExists(ctx, site); err == nil && exists {
 		fmt.Printf("Credentials for '%s' already exist. Updating credentials.\n", site)
@@ -99,6 +104,9 @@ func Store(ctx context.Context, site string, username string, password string) e
 }
 
 func Update(ctx context.Context, site string, username string, password string) error {
+	credMutex.Lock()
+	defer credMutex.Unlock()
+
 	encryptedPassword, err := encrypt(password)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt password for site %s: %v", site, err)
@@ -159,6 +167,9 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 }
 
 func Delete(ctx context.Context, site string) bool {
+	credMutex.Lock()
+	defer credMutex.Unlock()
+
 	_, err := firestoreClient.Collection("credentials").Doc(site).Delete(ctx)
 	if err != nil {
 		// We can log this error if needed, but for the function signature we just return false
