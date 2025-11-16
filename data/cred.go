@@ -31,7 +31,9 @@ var firestoreClient *firestore.Client
 var encryptionKey []byte
 var credMutex = &sync.Mutex{}
 
-// InitDB initializes the Firestore database client and loads the encryption key from environment variables.
+// InitDB loads environment configuration, decodes and validates the AES-256 encryption key, and initializes the package Firestore client.
+//
+// InitDB reads environment variables (via .env), expects ENCRYPTION_KEY as a hex-encoded 32-byte key, and requires PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS for Firebase initialization. On success it sets the package-level encryptionKey and firestoreClient; on failure it returns a descriptive error.
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 
@@ -69,7 +71,9 @@ func InitDB(ctx context.Context) error {
 	return nil
 }
 
-// CloseDB closes the Firestore client connection and releases associated resources.
+// CloseDB closes the Firestore client and releases its resources.
+// If a client is initialized, it attempts to close it and logs any error encountered.
+// It is safe to call CloseDB multiple times.
 func CloseDB() {
 	if firestoreClient != nil {
 		if err := firestoreClient.Close(); err != nil {
@@ -78,7 +82,13 @@ func CloseDB() {
 	}
 }
 
-// Store saves credentials for a given site to Firestore with encrypted password.
+// Store saves credentials for the given site in Firestore, encrypting the password
+// before writing and updating existing entries when present.
+//
+// Store acquires a package-level mutex to serialize write operations. If a document
+// for the site already exists, it updates that document; otherwise it creates a new one.
+// It returns an error if checking existence, encrypting the password, or writing to
+// Firestore fails.
 func Store(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -113,7 +123,9 @@ func Store(ctx context.Context, site string, username string, password string) e
 	return nil
 }
 
-// Update updates existing credentials for a given site in Firestore with a new encrypted password.
+// Update updates the stored credentials for the named site with the provided username and password.
+// It acquires an internal lock and delegates to the internal update implementation.
+// Returns an error if encryption or the Firestore write fails.
 func Update(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -122,7 +134,9 @@ func Update(ctx context.Context, site string, username string, password string) 
 }
 
 // updateLocked updates credentials for a site without acquiring the mutex.
-// The caller must already hold credMutex.
+// updateLocked encrypts the provided password and writes the credential document for the specified site to Firestore.
+// The caller must hold credMutex.
+// It returns an error if encryption fails or if the Firestore write operation fails.
 func updateLocked(ctx context.Context, site string, username string, password string) error {
 	encryptedPassword, err := encrypt(password)
 	if err != nil {
@@ -141,7 +155,10 @@ func updateLocked(ctx context.Context, site string, username string, password st
 	return nil
 }
 
-// Show retrieves and displays all stored credentials from Firestore with decrypted passwords.
+// Show lists all credentials stored in Firestore and prints each site ID, username, and decrypted password.
+// For each document in the "credentials" collection it attempts to decrypt the stored password; on decryption failure
+// it logs the error and prints "[DECRYPTION FAILED]". Any iteration error other than end-of-collection is logged and
+// causes the program to terminate.
 func Show(ctx context.Context) {
 	iter := firestoreClient.Collection("credentials").Documents(ctx)
 	for {
@@ -165,7 +182,8 @@ func Show(ctx context.Context) {
 	}
 }
 
-// Retrieve fetches and decrypts credentials for a specific site from Firestore.
+// Retrieve fetches credentials for the given site from Firestore and decrypts the stored password.
+// It returns the Credentials with the decrypted Password and true if the document exists and decryption succeeds; otherwise it returns an empty Credentials and false.
 func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
 	if err != nil {
@@ -185,7 +203,8 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	return creds, true
 }
 
-// Delete removes credentials for a given site from Firestore.
+// Delete removes the credentials document for the named site from Firestore.
+// It acquires an internal mutex to serialize access and returns true on success, false on failure.
 func Delete(ctx context.Context, site string) bool {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -221,7 +240,8 @@ func encrypt(plaintext string) (string, error) {
 	return hex.EncodeToString(ciphertext), nil
 }
 
-// decrypt decrypts data using AES-GCM.
+// decrypt decrypts a hex-encoded AES-GCM ciphertext using the package's encryptionKey and returns the plaintext string.
+// It returns an error if the input is not valid hex, the cipher/GCM cannot be initialized with the configured key, the ciphertext is too short to contain a nonce, or AEAD authentication fails.
 func decrypt(ciphertextHex string) (string, error) {
 	ciphertext, err := hex.DecodeString(ciphertextHex)
 	if err != nil {
