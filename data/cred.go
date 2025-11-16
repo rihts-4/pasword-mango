@@ -83,7 +83,7 @@ func Store(ctx context.Context, site string, username string, password string) e
 	// Check if credentials for the site already exist.
 	if exists, err := documentExists(ctx, site); err == nil && exists {
 		fmt.Printf("Credentials for '%s' already exist. Updating credentials.\n", site)
-		return Update(ctx, site, username, password)
+		return updateLocked(ctx, site, username, password)
 	}
 
 	encryptedPassword, err := encrypt(password)
@@ -107,6 +107,12 @@ func Update(ctx context.Context, site string, username string, password string) 
 	credMutex.Lock()
 	defer credMutex.Unlock()
 
+	return updateLocked(ctx, site, username, password)
+}
+
+// updateLocked updates credentials for a site without acquiring the mutex.
+// The caller must already hold credMutex.
+func updateLocked(ctx context.Context, site string, username string, password string) error {
 	encryptedPassword, err := encrypt(password)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt password for site %s: %v", site, err)
