@@ -83,9 +83,16 @@ func Store(ctx context.Context, site string, username string, password string) e
 	credMutex.Lock()
 	defer credMutex.Unlock()
 
-	// Check if credentials for the site already exist.
-	if exists, err := documentExists(ctx, site); err == nil && exists {
+	// Check if credentials for the site already exist by attempting to get the document.
+	// This single read operation replaces the separate documentExists check.
+	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
+	if err != nil && status.Code(err) != codes.NotFound {
+		return fmt.Errorf("failed to check for existing credentials for site %s: %v", site, err)
+	}
+
+	if doc != nil && doc.Exists() {
 		fmt.Printf("Credentials for '%s' already exist. Updating credentials.\n", site)
+		// Call updateLocked without acquiring the mutex since we already hold it
 		return updateLocked(ctx, site, username, password)
 	}
 
@@ -239,16 +246,4 @@ func decrypt(ciphertextHex string) (string, error) {
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	return string(plaintext), err
-}
-
-// documentExists checks if a document for a given site exists without reading its data.
-func documentExists(ctx context.Context, site string) (bool, error) {
-	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
-	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to check for document %s: %v", site, err)
-	}
-	return doc.Exists(), nil
 }
