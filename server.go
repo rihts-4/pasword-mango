@@ -19,6 +19,7 @@ func run(ctx context.Context, server *http.Server) {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	log.Println("Database initialized successfully.")
+	defer data.CloseDB()
 
 	// Start the server in a goroutine
 	go func() {
@@ -44,7 +45,5 @@ func run(ctx context.Context, server *http.Server) {
 		log.Fatalf("Server shutdown failed: %v", err)
 	}
 
-	// Close the database connection
-	data.CloseDB()
 	log.Println("Server and database connection shut down gracefully.")
 }
