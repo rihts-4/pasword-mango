@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // ErrAlreadyExists is returned when trying to store credentials for a site that already exists.
-var ErrAlreadyExists = fmt.Errorf("credentials for site already exist")
+var ErrAlreadyExists = errors.New("credentials for site already exist")
 
 // Store saves credentials for the given site in Firestore, encrypting the password
 // before writing and updating existing entries when present.
