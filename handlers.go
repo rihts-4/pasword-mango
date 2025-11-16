@@ -87,8 +87,13 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing site in URL path for delete", http.StatusBadRequest)
 			return
 		}
-		if !data.Delete(ctx, site) {
-			http.Error(w, "Failed to delete credentials or not found", http.StatusInternalServerError)
+		err := data.Delete(ctx, site)
+		if err != nil {
+			if err == data.ErrNotFound {
+				http.Error(w, "Credentials not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "Failed to delete credentials", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
