@@ -75,6 +75,13 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
+		// Trim and validate username and password
+		creds.Username = strings.TrimSpace(creds.Username)
+		creds.Password = strings.TrimSpace(creds.Password)
+		if creds.Username == "" || creds.Password == "" {
+			http.Error(w, "username and password required", http.StatusBadRequest)
+			return
+		}
 		if err := data.Update(ctx, site, creds.Username, creds.Password); err != nil {
 			http.Error(w, "Failed to update credentials", http.StatusInternalServerError)
 			return
