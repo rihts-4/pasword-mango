@@ -31,7 +31,7 @@ func InitDB(ctx context.Context) error {
 	config := &firebase.Config{
 		ProjectID: os.Getenv("PROJECT_ID"),
 	}
-	sa := option.WithCredentialsFile("adminkey.json")
+	sa := option.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 	app, err := firebase.NewApp(ctx, config, sa)
 	if err != nil {
 		return fmt.Errorf("error initializing app: %v", err)
