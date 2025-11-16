@@ -38,7 +38,7 @@ func main() {
 	}
 	fmt.Println()
 
-	fmt.Println("--- Deleting credentials for 'google.com' ---")
-	data.Delete(ctx, "google.com")
+	// fmt.Println("--- Deleting credentials for 'google.com' ---")
+	// data.Delete(ctx, "google.com")
 	fmt.Println()
 }
