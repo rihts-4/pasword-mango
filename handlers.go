@@ -20,9 +20,9 @@ import (
 // The handler returns 400 for malformed requests, 500 for internal/data errors, and 405 for unsupported methods.
 func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the site from the URL path, e.g., "/credentials/google.com" -> "google.com"
-	site := strings.TrimPrefix(r.URL.Path, "/credentials/")
-	site = strings.TrimSuffix(site, "/")
-
+	path := strings.TrimPrefix(r.URL.Path, "/credentials")
+	path = strings.Trim(path, "/")
+	site := path // empty => list all; non-empty => specific site
 	ctx := r.Context()
 
 	switch r.Method {
