@@ -31,6 +31,7 @@ var firestoreClient *firestore.Client
 var encryptionKey []byte
 var credMutex = &sync.Mutex{}
 
+// InitDB initializes the Firestore database client and loads the encryption key from environment variables.
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 
@@ -68,6 +69,7 @@ func InitDB(ctx context.Context) error {
 	return nil
 }
 
+// CloseDB closes the Firestore client connection and releases associated resources.
 func CloseDB() {
 	if firestoreClient != nil {
 		if err := firestoreClient.Close(); err != nil {
@@ -76,6 +78,7 @@ func CloseDB() {
 	}
 }
 
+// Store saves credentials for a given site to Firestore with encrypted password.
 func Store(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -103,6 +106,7 @@ func Store(ctx context.Context, site string, username string, password string) e
 	return nil
 }
 
+// Update updates existing credentials for a given site in Firestore with a new encrypted password.
 func Update(ctx context.Context, site string, username string, password string) error {
 	credMutex.Lock()
 	defer credMutex.Unlock()
@@ -124,6 +128,7 @@ func Update(ctx context.Context, site string, username string, password string) 
 	return nil
 }
 
+// Show retrieves and displays all stored credentials from Firestore with decrypted passwords.
 func Show(ctx context.Context) {
 	iter := firestoreClient.Collection("credentials").Documents(ctx)
 	for {
@@ -147,6 +152,7 @@ func Show(ctx context.Context) {
 	}
 }
 
+// Retrieve fetches and decrypts credentials for a specific site from Firestore.
 func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
 	if err != nil {
@@ -166,6 +172,7 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 	return creds, true
 }
 
+// Delete removes credentials for a given site from Firestore.
 func Delete(ctx context.Context, site string) bool {
 	credMutex.Lock()
 	defer credMutex.Unlock()
