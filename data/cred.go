@@ -139,12 +139,13 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 }
 
 // Delete removes the credentials document for the named site from Firestore.
-// Delete removes the stored credentials document for the given site.
-// It acquires an internal mutex to serialize the deletion and returns true on successful removal, false if the site is not found or the deletion fails; errors are printed to stdout.
-func Delete(ctx context.Context, site string) bool {
+// It acquires an internal mutex to serialize the deletion. If the site is not found,
+// it returns ErrNotFound. If the deletion fails for any other reason, it returns the error.
+// On successful deletion, it returns nil.
+func Delete(ctx context.Context, site string) error {
 	docRef, err := findSiteDocument(ctx, site)
 	if err != nil {
-		return false // Site not found
+		return ErrNotFound // Site not found
 	}
 
 	credMutex.Lock()
@@ -152,10 +153,8 @@ func Delete(ctx context.Context, site string) bool {
 
 	_, err = docRef.Delete(ctx)
 	if err != nil {
-		// We can log this error if needed, but for the function signature we just return false
-		fmt.Printf("Failed to delete site %s: %v\n", site, err)
-		return false
+		return fmt.Errorf("failed to delete site %s: %v", site, err)
 	}
 	fmt.Println("Credentials deleted successfully!")
-	return true
+	return nil
 }
