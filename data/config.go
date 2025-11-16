@@ -19,15 +19,9 @@ var firestoreClient *firestore.Client
 var encryptionKey []byte
 var credMutex = &sync.Mutex{}
 
-// InitDB loads environment configuration, decodes and validates the AES-256 encryption key,
-// and initializes the package Firestore client.
-//
-// InitDB reads environment variables (via .env), expects ENCRYPTION_KEY as a hex-encoded 32-byte key,
-// and requires PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS for Firebase initialization.
 // InitDB loads environment configuration, validates a hex-encoded AES-256 encryption key, and initializes the Firestore client.
 //
 // It loads variables from a ".env" file and reads ENCRYPTION_KEY, PROJECT_ID, and GOOGLE_APPLICATION_CREDENTIALS from the environment. On success it assigns the decoded 32-byte AES key to the package-level `encryptionKey` and the initialized Firestore client to the package-level `firestoreClient`. It returns an error if the encryption key is missing, cannot be hex-decoded, is not 32 bytes long, or if Firebase app or Firestore client initialization fails.
-func InitDB(ctx context.Context) error {
 func InitDB(ctx context.Context) error {
 	err := godotenv.Load(".env")
 	if err != nil {
