@@ -6,9 +6,10 @@ import (
 	"log"
 
 	"google.golang.org/api/iterator"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
+
+// ErrAlreadyExists is returned when trying to store credentials for a site that already exists.
+var ErrAlreadyExists = fmt.Errorf("credentials for site already exist")
 
 // Store saves credentials for the given site in Firestore, encrypting the password
 // before writing and updating existing entries when present.
@@ -21,34 +22,14 @@ func Store(ctx context.Context, site string, username string, password string) e
 	credMutex.Lock()
 	defer credMutex.Unlock()
 
-	// Check if credentials for the site already exist by attempting to get the document.
-	// This single read operation replaces the separate documentExists check.
-	doc, err := firestoreClient.Collection("credentials").Doc(site).Get(ctx)
-	if err != nil && status.Code(err) != codes.NotFound {
-		return fmt.Errorf("failed to check for existing credentials for site %s: %v", site, err)
+	// Use findSiteDocument to check for existence with flexible matching.
+	docRef, _ := findSiteDocument(ctx, site)
+	if docRef != nil {
+		return ErrAlreadyExists
 	}
 
-	if doc != nil && doc.Exists() {
-		fmt.Printf("Credentials for '%s' already exist. Updating credentials.\n", site)
-		// Call updateLocked without acquiring the mutex since we already hold it
-		return updateLocked(ctx, site, username, password)
-	}
-
-	encryptedPassword, err := encrypt(password)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt password for site %s: %v", site, err)
-	}
-
-	creds := Credentials{
-		Username: username,
-		Password: encryptedPassword,
-	}
-	_, err = firestoreClient.Collection("credentials").Doc(site).Set(ctx, creds)
-	if err != nil {
-		return fmt.Errorf("failed adding credential for site %s: %v", site, err)
-	}
-	fmt.Println("Credentials stored successfully!")
-	return nil
+	// If not found, create a new document using the original site name.
+	return updateLocked(ctx, site, username, password)
 }
 
 // Update updates the stored credentials for the named site with the provided username and password.
@@ -145,7 +126,7 @@ func Retrieve(ctx context.Context, site string) (Credentials, bool) {
 func Delete(ctx context.Context, site string) error {
 	docRef, err := findSiteDocument(ctx, site)
 	if err != nil {
-		return ErrNotFound // Site not found
+		return err // Will be ErrNotFound from findSiteDocument
 	}
 
 	credMutex.Lock()
@@ -155,6 +136,5 @@ func Delete(ctx context.Context, site string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete site %s: %v", site, err)
 	}
-	fmt.Println("Credentials deleted successfully!")
 	return nil
 }

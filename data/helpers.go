@@ -69,11 +69,11 @@ func findSiteDocument(ctx context.Context, site string) (*firestore.DocumentRef,
 	if err != nil && status.Code(err) != codes.NotFound {
 		log.Printf("Error during findSiteDocument for site '%s': %v", site, err)
 	}
-	return nil, fmt.Errorf("credentials for site '%s' not found", site)
+	return nil, ErrNotFound
 }
 
 // getAlternativeSite computes an alternative site name for credential lookup using public suffix awareness.
-// 
+//
 // For domains ending with ".com", it removes only the ".com" suffix (e.g., "example.com" → "example").
 // For other domains, it replaces the effective TLD+1 (eTLD+1) with the base plus ".com",
 // while preserving any subdomains (e.g., "www.example.co.uk" → "www.example.com").
@@ -110,7 +110,7 @@ func getAlternativeSite(site string) string {
 
 	// Get the base domain by removing the TLD from eTLD+1
 	baseDomain := strings.TrimSuffix(eTLDPlus1, "."+eTLD)
-	
+
 	// If the site is exactly the eTLD+1 (no subdomains), return base.com
 	if site == eTLDPlus1 {
 		return baseDomain + ".com"
@@ -119,11 +119,11 @@ func getAlternativeSite(site string) string {
 	// Otherwise, we have subdomains. Replace the eTLD+1 portion with base + ".com"
 	// Get the subdomain prefix (everything before the eTLD+1)
 	subdomain := strings.TrimSuffix(site, "."+eTLDPlus1)
-	
+
 	// Construct the alternative: subdomain.base.com
 	if subdomain != "" {
 		return subdomain + "." + baseDomain + ".com"
 	}
-	
+
 	return baseDomain + ".com"
 }
