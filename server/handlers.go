@@ -89,14 +89,14 @@ func credentialsHandler(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodGet:
 		if site == "" { // Show all credentials
-			creds, err := data.Show(ctx)
+			sites, err := data.Show(ctx)
 			if err != nil {
 				http.Error(w, "Failed to retrieve credentials", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(creds)
+			json.NewEncoder(w).Encode(sites)
 		} else { // Retrieve specific credentials
 			creds, found := data.Retrieve(ctx, site)
 			if !found {
