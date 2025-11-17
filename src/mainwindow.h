@@ -29,6 +29,5 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QNetworkAccessManager *m_networkManager;
-    QJsonObject m_credentials; // To store the full credential data
 };
 #endif // MAINWINDOW_H

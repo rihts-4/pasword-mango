@@ -2,11 +2,13 @@
 #define PASSWORDDETAILDIALOG_H
 
 #include <QDialog>
+#include <QString>
 #include <QJsonObject>
 
 class QNetworkAccessManager;
 class QLabel;
 class QNetworkReply;
+class QPushButton;
 
 class PasswordDetailDialog : public QDialog
 {
