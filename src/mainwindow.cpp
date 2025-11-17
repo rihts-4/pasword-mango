@@ -121,7 +121,6 @@ void MainWindow::fetchPasswords()
                         ui->passwordListView->setModel(model);
                     }
                     model->setStringList(sites);
-                    m_credentials.empty(); // Clear the old cache as it's no longer populated here.
                 } else {
                     QMessageBox::warning(this, "Parse Error", "Failed to parse JSON response or it was not a JSON array.");
                 }
