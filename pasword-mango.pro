@@ -8,11 +8,13 @@ TEMPLATE = app
 SOURCES += \
     src/main.cpp \
     src/mainwindow.cpp \
-    src/addeditdialog.cpp
+    src/addeditdialog.cpp \
+    src/passworddetaildialog.cpp
 
 HEADERS += \
     src/mainwindow.h \
-    src/addeditdialog.h
+    src/addeditdialog.h \
+    src/passworddetaildialog.h
 
 RESOURCES += \
     resources.qrc
