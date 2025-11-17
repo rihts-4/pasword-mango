@@ -16,7 +16,10 @@
 #include <QDebug>
 
 PasswordDetailDialog::PasswordDetailDialog(const QString &site, QWidget *parent)
-    : QDialog(parent), m_site(site), m_networkManager(new QNetworkAccessManager(this))
+    : QDialog(parent),
+      m_site(site),
+      m_isPasswordVisible(false),
+      m_networkManager(new QNetworkAccessManager(this))
 {
     setWindowTitle("Password Details");
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -27,8 +30,16 @@ PasswordDetailDialog::PasswordDetailDialog(const QString &site, QWidget *parent)
     m_passwordLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_usernameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     formLayout->addRow("Site:", new QLabel(m_site, this));
-    formLayout->addRow("username:", m_usernameLabel);
-    formLayout->addRow("password:", m_passwordLabel);
+    formLayout->addRow("Username:", m_usernameLabel);
+
+    // Layout for password and toggle button
+    QHBoxLayout *passwordLayout = new QHBoxLayout();
+    passwordLayout->addWidget(m_passwordLabel);
+    m_togglePasswordButton = new QPushButton("Show", this);
+    m_togglePasswordButton->setFixedWidth(60);
+    passwordLayout->addWidget(m_togglePasswordButton);
+    formLayout->addRow("Password:", passwordLayout);
+
     layout->addLayout(formLayout);
 
     QDialogButtonBox *buttonBox = new QDialogButtonBox(this);
@@ -41,6 +52,7 @@ PasswordDetailDialog::PasswordDetailDialog(const QString &site, QWidget *parent)
     connect(updateButton, &QPushButton::clicked, this, &PasswordDetailDialog::onUpdate);
     connect(deleteButton, &QPushButton::clicked, this, &PasswordDetailDialog::onDelete);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(m_togglePasswordButton, &QPushButton::clicked, this, &PasswordDetailDialog::onTogglePasswordVisibility);
 
     // Fetch the specific credentials for this site
     QNetworkRequest request(QUrl("http://localhost:8080/credentials/" + m_site));
@@ -64,8 +76,9 @@ void PasswordDetailDialog::onCredentialsFetched(QNetworkReply *reply)
         {
             QJsonObject creds = doc.object();
             // Use case-insensitive keys from Go backend
+            m_password = creds["Password"].toString();
             m_usernameLabel->setText(creds["Username"].toString());
-            m_passwordLabel->setText(creds["Password"].toString());
+            m_passwordLabel->setText("******");
         }
         else
         {
@@ -79,6 +92,29 @@ void PasswordDetailDialog::onCredentialsFetched(QNetworkReply *reply)
         reject(); // Close dialog on error
     }
     reply->deleteLater();
+}
+
+void PasswordDetailDialog::onTogglePasswordVisibility()
+{
+    if (!m_isPasswordVisible)
+    {
+        auto reply = QMessageBox::question(this, "Show Password",
+                                           "Are you sure you want to show the password in plain text?",
+                                           QMessageBox::Yes | QMessageBox::No);
+
+        if (reply == QMessageBox::Yes)
+        {
+            m_passwordLabel->setText(m_password);
+            m_togglePasswordButton->setText("Hide");
+            m_isPasswordVisible = true;
+        }
+    }
+    else
+    {
+        m_passwordLabel->setText("******");
+        m_togglePasswordButton->setText("Show");
+        m_isPasswordVisible = false;
+    }
 }
 
 void PasswordDetailDialog::onUpdate()

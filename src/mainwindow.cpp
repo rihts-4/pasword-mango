@@ -54,6 +54,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->refreshButton, &QPushButton::clicked, this, &MainWindow::fetchPasswords);
     connect(ui->passwordListView, &QListView::doubleClicked, this, &MainWindow::onPasswordItemDoubleClicked);
 
+    // Disable editing on double-click to prevent renaming items in the list.
+    ui->passwordListView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
     fetchPasswords();
 }
 
