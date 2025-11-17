@@ -1,14 +1,22 @@
 # Pasword Mango
 
-Pasword Mango is a password manager backend designed to help you manage your credentials effortlessly. It provides a secure, high-performance RESTful API built with Go, using Google Cloud Firestore for persistent, encrypted storage. This backend is intended to be used with a frontend client, such as the planned C++ Qt desktop application.
+Pasword Mango is a full-stack password manager designed to help you manage your credentials effortlessly. It combines a secure, high-performance RESTful API built with Go and a native C++ Qt desktop application for a seamless user experience.
 
 ## ✨ Features
 
-- **Secure Credential Storage**: Passwords are encrypted at rest using **AES-256-GCM** before being stored in the database, ensuring they are never saved in plaintext.
-- **RESTful API**: A clean and simple API for all CRUD (Create, Read, Update, Delete) operations on credentials.
-- **High-Performance Backend**: The backend is written in [Go](https://go.dev/), ensuring speed, reliability, and excellent concurrency support.
-- **Flexible Site Lookup**: API endpoints for retrieving, updating, and deleting credentials can find sites with or without a `.com` suffix, improving user experience.
-- **Scalable Database**: Leverages **Google Cloud Firestore** for a scalable, serverless NoSQL database solution.
+### Backend (Go)
+
+- **Secure Credential Storage**: Passwords are encrypted at rest using **AES-256-GCM**.
+- **RESTful API**: A clean and simple API for all CRUD operations.
+- **High-Performance**: Written in Go for speed and reliability.
+- **Flexible Site Lookup**: Finds sites with or without a `.com` suffix.
+- **Scalable Database**: Leverages Google Cloud Firestore.
+
+### Frontend (C++ & Qt)
+
+- **Intuitive UI**: A clean and simple desktop interface built with Qt.
+- **Full CRUD Functionality**: Add, view, update, and delete passwords directly from the app.
+- **Secure Password Toggling**: Passwords are redacted by default. A confirmation dialog is required to view them in plain text, preventing accidental exposure.
 
 ## 🛠️ Tech Stack
 
@@ -54,16 +62,24 @@ The API provides the following endpoints for managing credentials:
 ### `DELETE /credentials/{site}`
 
 - **Action**: Deletes the credentials for a specific site.
-- **Response**: `200 OK` on success.
+- **Response**: `200 OK` on success, `404 Not Found` if the site does not exist.
 
-## ⚠️ Limitations
+## ⚠️ Limitations & Future Updates
 
-- **No User Authentication**: The API is currently open and does not differentiate between users. It is designed for a single-user context, such as a local desktop application.
-- **Single Static Encryption Key**: The application uses a single AES key loaded from an environment variable. In a production multi-user system, per-user keys derived from a master password would be more secure.
-- **HTTP Only**: The server runs on HTTP and is intended for local development. For production use, it should be run behind a reverse proxy that provides TLS/SSL encryption (HTTPS).
-- **No Pagination**: The `GET /credentials` endpoint retrieves all stored credentials in a single request. This will not scale well and could lead to performance issues if the database contains a large number of entries.
-- **Basic Input Validation**: While the API checks for empty fields and length limits, it does not perform stricter validation on the format of inputs (e.g., ensuring a site is a valid domain name).
-- **Limited Error Granularity**: For some operations like `GET /credentials/{site}`, a failure to find the site is indistinguishable from a failure to decrypt its password. Both scenarios result in a `404 Not Found` response, which can hide underlying data corruption issues.
+### Current Limitations
+
+- **No User Authentication**: The API is open and designed for a single-user, local-first context. Future versions could add a master password to encrypt the local database or the communication key.
+- **Single Static Encryption Key**: The backend uses a single AES key from an environment variable. A more secure approach would involve per-user keys derived from a master password.
+- **HTTP Only**: The server runs on HTTP. For production, it should be run behind a reverse proxy that provides TLS/SSL.
+- **No Pagination**: The main list loads all credentials at once, which could be slow with many entries.
+- **Basic UI Features**: The frontend is functional but lacks advanced features like search, sorting, or password generation.
+
+### Future Updates
+
+- **Copy to Clipboard**: Add buttons to quickly copy usernames and passwords.
+- **Search and Filter**: Implement a search bar to filter the password list.
+- **Master Password**: Secure the application with a master password.
+- **Improved UI/UX**: Enhance visual feedback, loading states, and error notifications.
 
 ## 🚀 Getting Started
 

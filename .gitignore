@@ -1,4 +1,2 @@
-adminkey.json
-.firebaserc
-.env
-pasword-mango
+.vscode/
+build/

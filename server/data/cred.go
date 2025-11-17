@@ -55,16 +55,11 @@ func Update(ctx context.Context, site string, username string, password string) 
 	return updateLocked(ctx, docRef.ID, username, password)
 }
 
-// Show retrieves all credentials from Firestore, decrypts their passwords, and returns them as a slice.
-// For each document, it attempts to decrypt the password. On decryption failure, the error is logged,
-// and the password for that entry is set to "[DECRYPTION FAILED]".
-// Show retrieves all stored site credentials and attempts to decrypt each password.
-// If a password cannot be decrypted, the error is logged and the password value
-// in the returned entry is set to "[DECRYPTION FAILED]".
-// It returns the slice of site credentials and a non-nil error only if iterating
-// the Firestore collection fails.
-func Show(ctx context.Context) ([]SiteCredentials, error) {
-	var results []SiteCredentials
+// Show retrieves a list of all stored site names.
+// It returns a slice of strings containing the site names and a non-nil error
+// only if iterating the Firestore collection fails.
+func Show(ctx context.Context) ([]string, error) {
+	var sites []string
 	iter := firestoreClient.Collection("credentials").Documents(ctx)
 	for {
 		doc, err := iter.Next()
@@ -72,24 +67,11 @@ func Show(ctx context.Context) ([]SiteCredentials, error) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate credentials: %v", err)
+			return nil, fmt.Errorf("failed to iterate credentials: %w", err)
 		}
-
-		var creds Credentials
-		doc.DataTo(&creds)
-
-		decryptedPassword, err := decrypt(creds.Password)
-		if err != nil {
-			log.Printf("Failed to decrypt password for site %s: %v. Omitting password.", doc.Ref.ID, err)
-			decryptedPassword = "[DECRYPTION FAILED]"
-		}
-		results = append(results, SiteCredentials{
-			Site:     doc.Ref.ID,
-			Username: creds.Username,
-			Password: decryptedPassword,
-		})
+		sites = append(sites, doc.Ref.ID)
 	}
-	return results, nil
+	return sites, nil
 }
 
 // Retrieve fetches credentials for the given site from Firestore and decrypts the stored password.
